@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sankat Setu — SOS & Disaster Reporting</title>
+  <meta name="description" content="Multi-source disaster intelligence, citizen safety services, and authority command command center.">
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Outfit:wght@100..900&display=swap" rel="stylesheet">
+  
+  <!-- Leaflet Map CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+  
+  <!-- Custom Styling -->
+  <link rel="stylesheet" href="style.css">
+  
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="bg-zinc-50 dark:bg-[#09090b] text-zinc-950 dark:text-zinc-50">
+  
+  <!-- SOS Flashing Screen Beacon -->
+  <div id="sos-beacon" class="hidden">
+    <div class="beacon-content">
+      <i data-lucide="bell-ring" class="beacon-icon"></i>
+      <h2>EMERGENCY SOS SIGNAL ACTIVE</h2>
+      <p>Siren sounding. Automated rescue request dispatched to authorities with your coordinates.</p>
+      <button id="btn-cancel-sos" class="btn btn-secondary">
+        <i data-lucide="bell-off"></i> Cancel SOS Alarm
+      </button>
+    </div>
+  </div>
+
+  <div class="app-container">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-left">
+        <div class="logo-icon"><i data-lucide="shield-alert"></i></div>
+        <div>
+          <h1 id="app-title">Sankat Setu</h1>
+          <p class="subtitle">Disaster Response Network</p>
+        </div>
+      </div>
+      
+      <!-- Top Portal Navigation (Segmented Control) -->
+      <div class="portal-toggle-container">
+        <div class="segmented-control main-nav">
+          <button id="tab-home" class="control-btn active">
+            <i data-lucide="home"></i> Home
+          </button>
+          <button id="tab-sos" class="control-btn">
+            <i data-lucide="bell-ring"></i> SOS & Report
+          </button>
+          <button id="tab-services" class="control-btn">
+            <i data-lucide="map"></i> Services
+          </button>
+          <button id="tab-safety" class="control-btn">
+            <i data-lucide="book-open"></i> Safety Hub
+          </button>
+          <button id="tab-authority-portal" class="control-btn">
+            <i data-lucide="lock"></i> Command
+          </button>
+        </div>
+      </div>
+      
+      <div class="header-right">
+        <!-- User Info status -->
+        <div id="user-status" class="user-status-badge hidden">
+          <span class="status-dot"></span>
+          <span id="user-display-name" class="font-mono">admin</span>
+          <button id="btn-logout" class="btn-logout" title="Log Out"><i data-lucide="log-out"></i></button>
+        </div>
+        
+        <button id="theme-toggle" class="btn btn-secondary btn-icon" aria-label="Toggle dark mode">
+          <i data-lucide="sun" class="sun-icon"></i>
+          <i data-lucide="moon" class="moon-icon"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- ==========================================================================
+         1. HOME / MONITOR DASHBOARD VIEW
+         ========================================================================== -->
+    <div id="home-view" class="portal-view">
+      <!-- Live Alert Banner -->
+      <div class="alert-banner">
+        <div class="alert-banner-icon"><i data-lucide="alert-octagon"></i></div>
+        <div class="alert-banner-text">
+          <strong>REAL-TIME EMERGENCY MONITOR:</strong> Heavy rainfall and flood risk active near Maninagar. Emergency services are deployed. Stay alert.
+        </div>
+      </div>
+
+      <!-- Hero Welcome section with Quick Links -->
+      <section class="hero-section">
+        <div class="hero-content">
+          <h2>Disaster Response Portal</h2>
+          <p>Secure platform for citizen distress dispatching, resource coordination, and emergency information sharing.</p>
+          <div class="hero-actions">
+            <button id="btn-hero-sos" class="btn btn-primary">
+              <i data-lucide="bell-ring"></i> Trigger SOS Alarm
+            </button>
+            <button id="btn-hero-services" class="btn btn-secondary">
+              <i data-lucide="map-pin"></i> Find Nearby Services
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Key Performance Indicators Row -->
+      <section class="kpi-grid" aria-label="Local Safety Metrics">
+        <div class="kpi-card hover-card">
+          <div class="kpi-icon"><i data-lucide="cloud-rain"></i></div>
+          <div class="kpi-content">
+            <span class="kpi-label">Local Weather</span>
+            <span class="kpi-value text-blue" id="cit-weather-temp">29°C</span>
+          </div>
+        </div>
+        <div class="kpi-card hover-card">
+          <div class="kpi-icon icon-amber"><i data-lucide="wind"></i></div>
+          <div class="kpi-content">
+            <span class="kpi-label">Wind / AQI</span>
+            <span class="kpi-value text-amber" id="cit-weather-wind">14 km/h • Good</span>
+          </div>
+        </div>
+        <div class="kpi-card hover-card">
+          <div class="kpi-icon icon-rose"><i data-lucide="alert-triangle"></i></div>
+          <div class="kpi-content">
+            <span class="kpi-label">Active Alerts</span>
+            <span class="kpi-value text-rose" id="cit-weather-alert">Monsoon Alert</span>
+          </div>
+        </div>
+        <div class="kpi-card hover-card">
+          <div class="kpi-icon icon-emerald"><i data-lucide="check-circle-2"></i></div>
+          <div class="kpi-content">
+            <span class="kpi-label">Emergency Centers Open</span>
+            <span class="kpi-value text-emerald" id="cit-active-resources">8</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Split details layout for home -->
+      <div class="main-layout mt-4">
+        <!-- Environmental Atmosphere Details Card -->
+        <section class="left-panel">
+          <div class="card interactive-metric-card">
+            <div class="card-header">
+              <h3><i data-lucide="thermometer"></i> Environmental Atmosphere</h3>
+            </div>
+            <div class="card-body">
+              <div class="weather-metrics-grid">
+                <div class="weather-metric tooltip-trigger" data-tooltip="Rainfall level measured locally. Over 5mm/h indicates heavy rainfall risks.">
+                  <span class="w-label">Rainfall</span>
+                  <span class="w-val">2.8 mm/h</span>
+                </div>
+                <div class="weather-metric tooltip-trigger" data-tooltip="Moisture concentration in the atmosphere. High levels (>80%) indicate potential precipitation.">
+                  <span class="w-label">Humidity</span>
+                  <span class="w-val">84%</span>
+                </div>
+                <div class="weather-metric tooltip-trigger" data-tooltip="Atmospheric barometric pressure. Low pressure drops signal oncoming storms.">
+                  <span class="w-label">Barometer</span>
+                  <span class="w-val">1009 hPa</span>
+                </div>
+                <div class="weather-metric tooltip-trigger" data-tooltip="Solar Ultraviolet radiation index. Index 1 represents low skin risk.">
+                  <span class="w-label">UV Index</span>
+                  <span class="w-val">1 (Low)</span>
+                </div>
+              </div>
+              <p class="section-desc mt-4"><i data-lucide="info"></i> Click on any card above to view detailed explanation modal.</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- Dynamic Information Panel -->
+        <section class="right-panel">
+          <div class="card">
+            <div class="card-header">
+              <h3><i data-lucide="shield-check"></i> Latest Safety Bulletins</h3>
+            </div>
+            <div class="card-body">
+              <ul class="bulletin-list">
+                <li>
+                  <strong class="text-rose">Flood Warning:</strong> Maninagar district water level remains elevated. Please utilize public shelters if your home is low-lying.
+                </li>
+                <li>
+                  <strong class="text-emerald">Shelter Active:</strong> Municipal centers at local public schools are active with full food supplies, power, and medical backup.
+                </li>
+                <li>
+                  <strong class="text-amber">Distress Siren:</strong> The Iron Bell SOS alarm is live. Make sure your browser volume is raised so siren audio plays.
+                </li>
+              </ul>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <!-- ==========================================================================
+         2. SOS & CITIZEN REPORT VIEW
+         ========================================================================== -->
+    <div id="sos-view" class="portal-view hidden">
+      <div class="main-layout">
+        <!-- Left: SOS Alarm Trigger & volume settings -->
+        <section class="left-panel">
+          <!-- Iron Bell SOS Card -->
+          <div class="card sos-alarm-card">
+            <div class="card-body text-center">
+              <button id="btn-iron-bell" class="iron-bell-btn" aria-label="Trigger Iron Bell SOS">
+                <i data-lucide="bell-ring" class="bell-active-icon"></i>
+                <span class="bell-glowing-ring"></span>
+              </button>
+              <h2 class="sos-title">IRON BELL SOS</h2>
+              <p class="sos-desc">Press in danger to sound a local alarm siren, flash your screen, and dispatch your coordinates to emergency responders.</p>
+            </div>
+          </div>
+
+          <!-- Siren Customizer Widget -->
+          <div class="card sound-customizer-card">
+            <div class="card-header">
+              <h3><i data-lucide="volume-2"></i> Siren Audio Settings</h3>
+            </div>
+            <div class="card-body">
+              <div class="form-group">
+                <label for="siren-type">Siren Mode</label>
+                <select id="siren-type">
+                  <option value="wobble">Dual Oscillator Sweep (Warble)</option>
+                  <option value="hilo">Hi-Lo Alternating (Patrol)</option>
+                  <option value="phaser">High-Frequency Pulse (Laser)</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="siren-volume">Siren Volume: <span id="volume-val">50%</span></label>
+                <input type="range" id="siren-volume" min="0" max="100" value="50" class="volume-slider">
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Right: File citizen report card -->
+        <section class="right-panel">
+          <div class="card">
+            <div class="card-header">
+              <h3><i data-lucide="plus-circle"></i> File Emergency Report</h3>
+            </div>
+            <form id="citizen-report-form" class="card-body">
+              <div class="form-group">
+                <label for="cit-text">What is happening?</label>
+                <textarea id="cit-text" placeholder="Describe the disaster details (e.g. tree blockages, water level rise...)" rows="3" required></textarea>
+              </div>
+              <div class="form-group">
+                <label for="cit-location">Location Address/Name</label>
+                <input type="text" id="cit-location" placeholder="e.g. Maninagar Railway Station" required>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="cit-lat">Latitude</label>
+                  <input type="number" id="cit-lat" step="0.0001" min="-90" max="90" required>
+                </div>
+                <div class="form-group">
+                  <label for="cit-lng">Longitude</label>
+                  <input type="number" id="cit-lng" step="0.0001" min="-180" max="180" required>
+                </div>
+              </div>
+              
+              <div class="alert-info-box">
+                <i data-lucide="info"></i>
+                <span><strong>Pro-Tip:</strong> Click anywhere on the map in the <strong>Services</strong> page to capture and auto-fill coordinates.</span>
+              </div>
+
+              <div class="form-actions mt-4">
+                <button type="button" id="btn-cit-autofill" class="btn btn-secondary">
+                  <i data-lucide="map-pin"></i> Locate Me
+                </button>
+                <button type="submit" class="btn btn-primary">Submit Report</button>
+              </div>
+            </form>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <!-- ==========================================================================
+         3. SERVICE FINDER VIEW
+         ========================================================================== -->
+    <div id="services-view" class="portal-view hidden">
+      <div class="main-layout">
+        <!-- Left: Nearby Support Services Finder -->
+        <section class="left-panel">
+          <div class="card services-finder-card">
+            <div class="card-header flex-header">
+              <h3><i data-lucide="search-code"></i> Nearby Services</h3>
+              <div class="segmented-control services-toggle">
+                <button id="svc-tab-hospital" class="control-btn active">Hospitals</button>
+                <button id="svc-tab-police" class="control-btn">Police</button>
+                <button id="svc-tab-fire" class="control-btn">Fire Units</button>
+              </div>
+            </div>
+            <div class="card-body p-0">
+              <div id="nearby-services-list" class="services-list-container">
+                <!-- Dynamically populated -->
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Right: Map -->
+        <section class="right-panel">
+          <div class="card map-card">
+            <div class="map-overlay-tip"><i data-lucide="mouse-pointer-click"></i> Click on the map to pick report coordinates</div>
+            <div id="citizen-map" class="map-container"></div>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <!-- ==========================================================================
+         4. SAFETY HUB VIEW (NEW)
+         ========================================================================== -->
+    <div id="safety-view" class="portal-view hidden">
+      <div class="main-layout">
+        <!-- Left: Guides Selection -->
+        <section class="left-panel">
+          <div class="card">
+            <div class="card-header">
+              <h3><i data-lucide="book-open"></i> Disaster Prep Guides</h3>
+            </div>
+            <div class="card-body p-0">
+              <div class="disaster-guide-list">
+                <button class="guide-btn active" data-disaster="flood">
+                  <span class="guide-icon"><i data-lucide="droplet"></i></span>
+                  <span class="guide-label">Floods Prep</span>
+                </button>
+                <button class="guide-btn" data-disaster="fire">
+                  <span class="guide-icon"><i data-lucide="flame"></i></span>
+                  <span class="guide-label">Fire Safety</span>
+                </button>
+                <button class="guide-btn" data-disaster="earthquake">
+                  <span class="guide-icon"><i data-lucide="activity"></i></span>
+                  <span class="guide-label">Earthquake Plan</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Right: Interactive Checklist Widget -->
+        <section class="right-panel">
+          <div class="card survival-checklist-card">
+            <div class="card-header flex-header">
+              <div>
+                <h3 id="checklist-title">Flood Survival Checklist</h3>
+                <p class="section-desc mt-1">Check actions to complete. Stored locally.</p>
+              </div>
+              <div class="progress-indicator">
+                <span id="checklist-progress-text" class="font-mono text-sm font-bold text-blue">0%</span>
+              </div>
+            </div>
+            <div class="progress-bar-container">
+              <div id="checklist-progress-bar" class="progress-bar bar-emerald" style="width: 0%;"></div>
+            </div>
+            
+            <div class="card-body">
+              <div id="checklist-items" class="checklist-items-container">
+                <!-- Dynamically populated -->
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <!-- ==========================================================================
+         5. AUTHORITY PORTAL VIEW
+         ========================================================================== -->
+    <div id="authority-view" class="portal-view hidden">
+      <!-- Auth Login/Signup card when not authenticated -->
+      <div id="auth-forms-container" class="auth-card-wrapper">
+        <div class="card auth-card">
+          <div class="card-header flex-header">
+            <h3><i data-lucide="lock"></i> Authority Authentication</h3>
+            <div class="segmented-control auth-toggle">
+              <button id="toggle-login-tab" class="control-btn active">Log In</button>
+              <button id="toggle-signup-tab" class="control-btn">Sign Up</button>
+            </div>
+          </div>
+          
+          <!-- Login Form -->
+          <form id="auth-login-form" class="card-body">
+            <div class="form-group">
+              <label for="login-username">Username</label>
+              <input type="text" id="login-username" required autocomplete="username">
+            </div>
+            <div class="form-group">
+              <label for="login-password">Password</label>
+              <input type="password" id="login-password" required autocomplete="current-password">
+            </div>
+            <button type="submit" id="btn-login-submit" class="btn btn-primary w-full mt-2">Log In</button>
+          </form>
+
+          <!-- Signup Form -->
+          <form id="auth-signup-form" class="card-body hidden">
+            <div class="form-group">
+              <label for="signup-username">Username</label>
+              <input type="text" id="signup-username" required autocomplete="username">
+            </div>
+            <div class="form-group">
+              <label for="signup-password">Password</label>
+              <input type="password" id="signup-password" required autocomplete="new-password">
+            </div>
+            <div class="form-group">
+              <label for="signup-role">Role Authorization Code</label>
+              <select id="signup-role">
+                <option value="authority">Authority Officer</option>
+                <option value="citizen">Standard Citizen</option>
+              </select>
+            </div>
+            <button type="submit" id="btn-signup-submit" class="btn btn-primary w-full mt-2">Create Account</button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Authenticated Command Center Dashboard -->
+      <div id="authority-dashboard-content" class="hidden">
+        <!-- KPI Row -->
+        <section class="kpi-grid" aria-label="Key Performance Indicators">
+          <div class="kpi-card" id="kpi-total-reports">
+            <div class="kpi-icon"><i data-lucide="file-text"></i></div>
+            <div class="kpi-content">
+              <span class="kpi-label">Total Reports</span>
+              <span class="kpi-value" id="stat-total-reports">0</span>
+            </div>
+          </div>
+          <div class="kpi-card" id="kpi-verified-reports">
+            <div class="kpi-icon icon-emerald"><i data-lucide="check-circle-2"></i></div>
+            <div class="kpi-content">
+              <span class="kpi-label">Verified Incidents</span>
+              <span class="kpi-value text-emerald" id="stat-verified-reports">0</span>
+            </div>
+          </div>
+          <div class="kpi-card" id="kpi-active-fires">
+            <div class="kpi-icon icon-rose"><i data-lucide="flame"></i></div>
+            <div class="kpi-content">
+              <span class="kpi-label">Active Fires</span>
+              <span class="kpi-value text-rose" id="stat-active-fires">0</span>
+            </div>
+          </div>
+          <div class="kpi-card" id="kpi-available-resources">
+            <div class="kpi-icon icon-blue"><i data-lucide="truck"></i></div>
+            <div class="kpi-content">
+              <span class="kpi-label">Resources Available</span>
+              <span class="kpi-value text-blue" id="stat-available-resources">0</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- Command Split Layout -->
+        <div class="main-layout mt-4">
+          <!-- Left: Feed, filters, and report creations -->
+          <section class="left-panel">
+            <!-- Create Report Card -->
+            <div class="card collapse-card">
+              <div class="card-header" id="auth-report-header">
+                <h3><i data-lucide="plus-circle"></i> File Incident Report</h3>
+                <button id="toggle-auth-form" class="btn-ghost" aria-label="Toggle form"><i data-lucide="chevron-down"></i></button>
+              </div>
+              
+              <form id="auth-report-form" class="card-body hidden">
+                <div class="form-group">
+                  <label for="input-text">Incident Details</label>
+                  <textarea id="input-text" placeholder="Describe the disaster..." rows="2" required></textarea>
+                </div>
+                
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="select-source">Source Type</label>
+                    <select id="select-source" required>
+                      <option value="news">News Media</option>
+                      <option value="citizen_app">Citizen App</option>
+                      <option value="twitter">Twitter / X</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label for="input-location">Location Name</label>
+                    <input type="text" id="input-location" required>
+                  </div>
+                </div>
+
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="input-lat">Latitude</label>
+                    <input type="number" id="input-lat" step="0.0001" min="-90" max="90" required>
+                  </div>
+                  <div class="form-group">
+                    <label for="input-lng">Longitude</label>
+                    <input type="number" id="input-lng" step="0.0001" min="-180" max="180" required>
+                  </div>
+                </div>
+
+                <div class="form-actions">
+                  <button type="button" id="btn-auth-autofill" class="btn btn-secondary">
+                    <i data-lucide="map-pin"></i> Pick Current Location
+                  </button>
+                  <button type="submit" id="btn-submit-report" class="btn btn-primary">Submit Report</button>
+                </div>
+              </form>
+            </div>
+
+            <!-- Reports feed -->
+            <div class="card reports-card">
+              <div class="card-header flex-header">
+                <h3><i data-lucide="list"></i> Reports Feed</h3>
+                <div class="filters-container">
+                  <select id="filter-category" class="filter-select">
+                    <option value="">All Categories</option>
+                    <option value="flood">Flood</option>
+                    <option value="fire">Fire</option>
+                    <option value="medical">Medical</option>
+                    <option value="rescue">Rescue</option>
+                    <option value="infrastructure">Infrastructure</option>
+                    <option value="uncategorized">Uncategorized</option>
+                  </select>
+                  
+                  <select id="filter-score" class="filter-select">
+                    <option value="0">All Scores</option>
+                    <option value="70">Verified (70+)</option>
+                    <option value="40">Likely (40+)</option>
+                  </select>
+                </div>
+              </div>
+              <div class="card-body p-0">
+                <div id="reports-list" class="reports-list-container">
+                  <!-- Dynamically populated -->
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Right: Map, suggested resources overlay -->
+          <section class="right-panel">
+            <div class="card map-card">
+              <div class="map-overlay-tip"><i data-lucide="mouse-pointer-click"></i> Click anywhere on the map to pick report coordinates</div>
+              <div id="authority-map" class="map-container"></div>
+            </div>
+
+            <!-- Suggested resources / verify card -->
+            <div class="card details-card hidden" id="incident-details-card">
+              <div class="card-header detail-header">
+                <div class="detail-title-group">
+                  <span id="detail-category-tag" class="tag tag-flood">Flood</span>
+                  <h3 id="detail-location-name">Maninagar, Ahmedabad</h3>
+                </div>
+                <button id="close-details-btn" class="btn-close" aria-label="Close details panel"><i data-lucide="x"></i></button>
+              </div>
+              
+              <div class="card-body grid-body">
+                <div class="detail-info-pane">
+                  <p id="detail-text" class="detail-description"></p>
+                  
+                  <div class="meta-info-grid">
+                    <div>
+                      <span class="meta-label">Source</span>
+                      <span id="detail-source" class="meta-value font-mono"></span>
+                    </div>
+                    <div>
+                      <span class="meta-label">Coordinates</span>
+                      <span id="detail-coords" class="meta-value font-mono"></span>
+                    </div>
+                    <div>
+                      <span class="meta-label">Time Reported</span>
+                      <span id="detail-time" class="meta-value font-mono"></span>
+                    </div>
+                  </div>
+
+                  <!-- Credibility metrics -->
+                  <div class="credibility-panel">
+                    <div class="credibility-header-metrics">
+                      <div class="credibility-metric-item">
+                        <span class="meta-label">Credibility Score</span>
+                        <span id="detail-score" class="score-number"></span>
+                      </div>
+                      <div class="credibility-metric-item text-right">
+                        <span class="meta-label">Classification</span>
+                        <span id="detail-label" class="tag tag-unverified"></span>
+                      </div>
+                    </div>
+                    <div class="progress-bar-container">
+                      <div id="detail-score-bar" class="progress-bar bar-rose"></div>
+                    </div>
+                    
+                    <div class="verification-actions">
+                      <div class="verifications-count">
+                        <i data-lucide="users"></i> <span id="detail-verifications">0</span> verifications
+                      </div>
+                      <button id="btn-verify-incident" class="btn btn-secondary">
+                        <i data-lucide="check-circle"></i> Verify Incident
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="detail-resources-pane">
+                  <h4><i data-lucide="navigation"></i> Nearest Resources</h4>
+                  <p class="section-desc">Nearest available emergency response units.</p>
+                  <div id="suggested-resources-list" class="resources-list-container">
+                    <!-- Dynamically populated -->
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Custom Information Explanation Modal Dialog -->
+  <div id="info-modal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modal-title">Atmosphere Parameter</h3>
+        <button id="close-modal-btn" class="btn-close" aria-label="Close dialog"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-body">
+        <p id="modal-text">Explanation content.</p>
+      </div>
+      <div class="modal-footer">
+        <button id="btn-modal-ok" class="btn btn-primary">Understood</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Leaflet Map JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <!-- Custom App JS -->
+  <script src="app.js"></script>
+</body>
+</html>
